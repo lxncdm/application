@@ -142,74 +142,110 @@ form.addEventListener("submit", async function (e) {
 
     e.preventDefault();
 
-    // Check screenshot sizes first
+    // Validate screenshots
     if (!validateFile(codmInput)) return;
     if (!validateFile(instagramInput)) return;
+
+    const codmFile = codmInput.files[0];
+    const instagramFile = instagramInput.files[0];
+
+    if (!codmFile || !instagramFile) {
+        alert("Please upload both required screenshots.");
+        return;
+    }
 
     submitButton.disabled = true;
     submitButton.innerHTML = "Uploading screenshots...";
 
     try {
 
-        const codmFile = codmInput.files[0];
-        const instagramFile = instagramInput.files[0];
+        // ================================
+        // UPLOAD CODM SCREENSHOT
+        // ================================
 
-        // Upload both screenshots to Cloudinary
         const codmUrl = await uploadToCloudinary(codmFile);
 
-        submitButton.innerHTML = "Uploading proof...";
+        submitButton.innerHTML = "Uploading Instagram proof...";
+
+        // ================================
+        // UPLOAD INSTAGRAM SCREENSHOT
+        // ================================
 
         const instagramUrl =
             await uploadToCloudinary(instagramFile);
 
-        // Create Formspree submission
+        submitButton.innerHTML = "Submitting application...";
+
+        // ================================
+        // CREATE NORMAL TEXT DATA
+        // ================================
+
         const formData = new FormData(form);
 
-        // IMPORTANT:
-        // Remove the actual image files.
-        // Formspree Free cannot receive them.
-        formData.delete("codmScreenshot");
-        formData.delete("instagramProof");
+        // Get all normal form fields
+        const submissionData = {};
 
-        // Send Cloudinary URLs instead
-        formData.append(
-            "codmScreenshotUrl",
-            codmUrl
-        );
+        for (const [key, value] of formData.entries()) {
 
-        formData.append(
-            "instagramProofUrl",
-            instagramUrl
-        );
+            // Ignore the actual image files
+            if (
+                key !== "codmScreenshot" &&
+                key !== "instagramProof"
+            ) {
+                submissionData[key] = value;
+            }
 
-        submitButton.innerHTML = "Submitting application...";
+        }
+
+        // Add Cloudinary URLs instead
+        submissionData.codmScreenshotUrl = codmUrl;
+        submissionData.instagramProofUrl = instagramUrl;
+
+        // ================================
+        // SEND TEXT DATA TO FORMSPREE
+        // ================================
 
         const response = await fetch(
             FORMSPREE_ENDPOINT,
             {
                 method: "POST",
-                body: formData,
+
                 headers: {
-                    "Accept": "application/json"
-                }
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+
+                body: JSON.stringify(submissionData)
             }
         );
 
         const data = await response.json().catch(() => null);
 
+        console.log("Formspree status:", response.status);
         console.log("Formspree response:", data);
+
+        // ================================
+        // HANDLE ERROR
+        // ================================
 
         if (!response.ok) {
 
-            throw new Error(
-                data?.errors?.map(error =>
-                    error.message
-                ).join("\n") ||
-                "Formspree submission failed."
-            );
+            const errorMessage =
+                data?.errors
+                    ?.map(error =>
+                        error.message || error.code
+                    )
+                    .join("\n")
+                ||
+                "Formspree submission failed.";
+
+            throw new Error(errorMessage);
         }
 
+        // ================================
         // SUCCESS
+        // ================================
+
         popup.style.display = "flex";
 
         form.reset();
@@ -222,7 +258,10 @@ form.addEventListener("submit", async function (e) {
 
     } catch (error) {
 
-        console.error("Application submission error:", error);
+        console.error(
+            "Application submission error:",
+            error
+        );
 
         alert(
             "Submission failed.\n\n" +
@@ -232,6 +271,7 @@ form.addEventListener("submit", async function (e) {
     } finally {
 
         submitButton.disabled = false;
+
         submitButton.innerHTML =
             "Submit Application";
 
