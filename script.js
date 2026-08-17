@@ -149,11 +149,18 @@ form.addEventListener("submit", async function (e) {
 
         else {
 
-            alert("Submission failed. Please try again.");
+    const errorData = await response.json().catch(() => null);
 
-        }
+    console.log("Formspree status:", response.status);
+    console.log("Formspree error:", errorData);
 
-    }
+    alert(
+        JSON.stringify(errorData, null, 2)
+    );
+
+}
+
+    
 
     catch (error) {
 
