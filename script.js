@@ -2,7 +2,7 @@
 // CONFIGURATION
 // ================================
 
-const FORMSPREE_ENDPOINT = "https://formspree.io/f/xzdnkzlj";
+const FORMSPREE_ENDPOINT = "https://formspree.io/f/mjybayjk";
 
 // ================================
 // ELEMENTS
